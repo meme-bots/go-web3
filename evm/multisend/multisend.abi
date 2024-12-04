@@ -1,0 +1,25 @@
+[
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_addresses",
+        "type": "address[]"
+      },
+      {
+        "name": "_amounts",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "multiTransfer",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "payable": true,
+    "stateMutability": "payable",
+    "type": "function"
+  }
+]
