@@ -142,6 +142,13 @@ func (w *Watcher) QueryBlockHash() (solana.Hash, error) {
 }
 
 func (w *Watcher) WatchSolPrice(interval time.Duration) {
+	price, err := w.QuerySolPrice()
+	if err == nil {
+		w.priceLock.Lock()
+		w.price = price
+		w.priceLock.Unlock()
+	}
+
 	for {
 		select {
 		case <-time.After(interval):
