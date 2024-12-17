@@ -368,6 +368,55 @@ func (s *Solana) Withdraw(to string, amount decimal.Decimal, privateKey string) 
 	return signature.String(), nil
 }
 
+func (s *Solana) Launch(req *types.LaunchRequest, feeRecipient_ string, feeRatio uint64, privateKey string) (*types.LaunchResponse, error) {
+	if req.DexID != 1 {
+		return nil, types.ErrNotImplemented
+	}
+
+	c := rpc.New(s.cfg.RPC)
+	feeRecipient := solana.MPK(feeRecipient_)
+	pk := solana.MustPrivateKeyFromBase58(privateKey)
+
+	account, err := c.GetAccountInfoWithOpts(
+		s.ctx,
+		pumpfun.GlobalPubKey,
+		&rpc.GetAccountInfoOpts{Commitment: rpc.CommitmentConfirmed},
+	)
+	if err != nil {
+		return nil, err
+	}
+	var global pumpfun.Global
+	err = borsh.Deserialize(&global, account.Value.Data.GetBinary())
+	if err != nil {
+		return nil, err
+	}
+
+	recentBlockHash, _ := s.watcher.GetRecentBlockHash()
+
+	signature, err := pumpfun.CreateAndBuy(
+		s.ctx,
+		s.cfg.RPC,
+		req.Name,
+		req.Symbol,
+		req.Uri,
+		feeRecipient,
+		req.BuyAmountSol.Uint64(),
+		req.SlipPage,
+		req.Gas.Uint64(),
+		0,
+		req.Tip.Uint64(),
+		&global,
+		pk,
+		recentBlockHash,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &types.LaunchResponse{
+		TxHash: signature.String(),
+	}, nil
+}
+
 func (s *Solana) Transact(req *types.Transact, feeRecipient_ string, feeRatio uint64, privateKey string) (*types.TransactResponse, error) {
 	c := rpc.New(s.cfg.RPC)
 	feeRecipient := solana.MPK(feeRecipient_)

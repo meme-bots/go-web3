@@ -412,6 +412,10 @@ func (v *EVM) Withdraw(to string, amount decimal.Decimal, privateKey string) (st
 	return txHash.Hex(), nil
 }
 
+func (v *EVM) Launch(req *types.LaunchRequest, feeRecipient_ string, feeRatio uint64, privateKey string) (*types.LaunchResponse, error) {
+	return nil, types.ErrNotImplemented
+}
+
 func (v *EVM) Transact(req *types.Transact, feeRecipient string, feeRatio uint64, privateKey string) (*types.TransactResponse, error) {
 	buy := req.TokenIn == v.cfg.WrapNativeToken
 	token := req.TokenIn

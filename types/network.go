@@ -45,6 +45,22 @@ type (
 		PoolAddress string
 	}
 
+	LaunchRequest struct {
+		DexID        int
+		Name         string
+		Symbol       string
+		Description  string
+		Uri          string
+		Gas          *big.Int
+		Tip          *big.Int
+		BuyAmountSol *big.Int
+		SlipPage     uint64
+	}
+
+	LaunchResponse struct {
+		TxHash string
+	}
+
 	TransactResponse struct {
 		TxHash              string
 		InitialTokenBalance *big.Int
@@ -130,6 +146,7 @@ type (
 		GetBaseGas() *big.Int
 		SendNative(bill *TransferBill, privateKey string) (string, error)
 		SendNativeBatch(bills []*TransferBill, privateKey string) (string, error)
+		Launch(req *LaunchRequest, feeRecipient_ string, feeRatio uint64, privateKey string) (*LaunchResponse, error)
 	}
 )
 

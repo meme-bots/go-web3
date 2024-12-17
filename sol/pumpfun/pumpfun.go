@@ -21,14 +21,18 @@ import (
 )
 
 var (
-	globalPubKey   = solana.MPK("4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf")
-	feeRecipient   = solana.MPK("CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM")
-	eventAuthority = solana.MPK("Ce6TQqeHC9p8KetsN6JsjHK7UTZk7nasjjnr7XxXp9F1")
+	GlobalPubKey                  = solana.MPK("4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf")
+	GlobalFeeRecipient            = solana.MPK("CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM")
+	eventAuthority                = solana.MPK("Ce6TQqeHC9p8KetsN6JsjHK7UTZk7nasjjnr7XxXp9F1")
+	MPL_TOKEN_METADATA_PROGRAM_ID = solana.MPK("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
 )
 
 const (
 	TotalSupplyWithDecimals = 1000000000000000
 	TotalSupply             = 1000000000
+
+	// MINT_AUTHORITY_SEED = "mint-authority"
+	// BONDING_CURVE_SEED  = "bonding-curve"
 )
 
 type SwapLogLayout struct {
@@ -187,7 +191,6 @@ func SendBuy(
 	privKey solana.PrivateKey,
 	recentBlockHash solana.Hash,
 ) (solana.Signature, error) {
-
 	var instructions []solana.Instruction
 
 	//set gas limit and gas price
@@ -217,8 +220,8 @@ func SendBuy(
 	swapInst := NewBuyInstruction(
 		tokenAmount,
 		solAmount,
-		globalPubKey,
-		feeRecipient,
+		GlobalPubKey,
+		GlobalFeeRecipient,
 		mint,
 		bondingCurvePubKey,
 		bondingCurveAta,
@@ -283,7 +286,6 @@ func SendSell(
 	privKey solana.PrivateKey,
 	recentBlockHash solana.Hash,
 ) (solana.Signature, error) {
-
 	var instructions []solana.Instruction
 
 	//set gas limit and gas price
@@ -304,8 +306,8 @@ func SendSell(
 	swapInst := NewSellInstruction(
 		tokenAmount,
 		minSolOutput,
-		globalPubKey,
-		feeRecipient,
+		GlobalPubKey,
+		GlobalFeeRecipient,
 		mint,
 		bondingCurvePubKey,
 		bondingCurveAta,
@@ -358,6 +360,149 @@ func SendSell(
 
 	_, err = tx.Sign(func(key solana.PublicKey) *solana.PrivateKey {
 		return &privKey
+	})
+	if err != nil {
+		return solana.Signature{}, err
+	}
+
+	if jitoTip != 0 {
+		return rpc.New(common.JitoRpc).SendTransaction(ctx, tx)
+	}
+
+	return cli.SendTransactionWithOpts(ctx, tx, rpc.TransactionOpts{SkipPreflight: true})
+}
+
+func GetInitialBuyPrice(global *Global, solAmount uint64) uint64 {
+	if solAmount == 0 {
+		return 0
+	}
+
+	k := new(big.Int).Mul(new(big.Int).SetUint64(global.InitialVirtualSolReserves), new(big.Int).SetUint64(global.InitialVirtualTokenReserves))
+	i := new(big.Int).SetUint64(global.InitialVirtualSolReserves + solAmount)
+	r := new(big.Int).Add(new(big.Int).Div(k, i), big.NewInt(1))
+	s := new(big.Int).Sub(new(big.Int).SetUint64(global.InitialVirtualTokenReserves), r)
+	max := new(big.Int).SetUint64(global.InitialRealTokenReserves)
+	if s.Cmp(max) < 0 {
+		return s.Uint64()
+	} else {
+		return max.Uint64()
+	}
+}
+
+func CreateAndBuy(
+	ctx context.Context,
+	rpcUrl, name, symbol, uri string,
+	botFeeRecipient solana.PublicKey,
+	solAmount, slippage, priorityFee, feeRatio, jitoTip uint64,
+	global *Global,
+	privKey solana.PrivateKey,
+	recentBlockHash solana.Hash,
+) (solana.Signature, error) {
+	var instructions []solana.Instruction
+
+	if priorityFee > 0 {
+		gasLimit := lo.If(solAmount > 0, 240000).Else(100000)
+		gasTmp := new(big.Int).Mul(big.NewInt(1000000), new(big.Int).SetUint64(priorityFee))
+		gasPrice := new(big.Int).Div(gasTmp, big.NewInt(int64(gasLimit)))
+		setCULimitInst := computebudget.NewSetComputeUnitLimitInstruction(uint32(gasLimit)).Build()
+		setCUPriceInst := computebudget.NewSetComputeUnitPriceInstruction(gasPrice.Uint64()).Build()
+		instructions = append(instructions, setCULimitInst, setCUPriceInst)
+	}
+
+	owner := privKey.PublicKey()
+	mintPrivateKey, err := solana.NewRandomPrivateKey()
+	if err != nil {
+		return solana.Signature{}, err
+	}
+
+	mint := mintPrivateKey.PublicKey()
+	metadataPDA, _, _ := solana.FindTokenMetadataAddress(mint)
+	bondingCurvePubKey := FindBondingCurve(mint)
+	bondingCurveAta, _, _ := solana.FindAssociatedTokenAddress(bondingCurvePubKey, mint)
+
+	fee := solAmount * feeRatio / 10000
+	solAmount -= fee
+
+	createInst := NewCreateInstruction(
+		name,
+		symbol,
+		uri,
+		mint,
+		owner,
+		bondingCurvePubKey,
+		bondingCurveAta,
+		GlobalPubKey,
+		solana.TokenMetadataProgramID,
+		metadataPDA,
+		owner,
+		solana.SystemProgramID,
+		solana.TokenProgramID,
+		solana.SPLAssociatedTokenAccountProgramID,
+		solana.SysVarRentPubkey,
+		eventAuthority,
+		ProgramID,
+	).Build()
+
+	instructions = append(instructions, createInst)
+
+	if solAmount > 0 {
+		ata, _, _ := solana.FindAssociatedTokenAddress(owner, mint)
+		createAtaInst := associatedtokenaccount.NewCreateInstruction(owner, owner, mint).Build()
+		instructions = append(instructions, createAtaInst)
+
+		tokenAmount := GetInitialBuyPrice(global, solAmount)
+		solAmountWithSlippage := solAmount + (solAmount*slippage)/10000
+		swapInst := NewBuyInstruction(
+			tokenAmount,
+			solAmountWithSlippage,
+			GlobalPubKey,
+			GlobalFeeRecipient,
+			mint,
+			bondingCurvePubKey,
+			bondingCurveAta,
+			ata,
+			owner,
+			solana.SystemProgramID,
+			solana.TokenProgramID,
+			solana.SysVarRentPubkey,
+			eventAuthority,
+			ProgramID,
+		).Build()
+		instructions = append(instructions, swapInst)
+	}
+
+	if fee != 0 {
+		feeTransferInst := system.NewTransferInstruction(fee, owner, botFeeRecipient).Build()
+		instructions = append(instructions, feeTransferInst)
+	}
+
+	if jitoTip != 0 {
+		idx := rand.Intn(len(common.JitoTipPaymentAccounts))
+		jitoTipTransferInst := system.NewTransferInstruction(jitoTip, owner, common.JitoTipPaymentAccounts[idx]).Build()
+		instructions = append(instructions, jitoTipTransferInst)
+	}
+
+	cli := rpc.New(rpcUrl)
+	if recentBlockHash.IsZero() {
+		recentBlock, err := cli.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
+		if err != nil {
+			return solana.Signature{}, err
+		}
+		recentBlockHash = recentBlock.Value.Blockhash
+	}
+
+	tx, err := solana.NewTransaction(instructions, recentBlockHash, solana.TransactionPayer(owner))
+	if err != nil {
+		return solana.Signature{}, err
+	}
+
+	_, err = tx.Sign(func(key solana.PublicKey) *solana.PrivateKey {
+		if key.Equals(owner) {
+			return &privKey
+		} else if key.Equals(mint) {
+			return &mintPrivateKey
+		}
+		return nil
 	})
 	if err != nil {
 		return solana.Signature{}, err
