@@ -303,6 +303,7 @@ func (s *Solana) GetTransaction(req *types.GetTransactionRequest) (*types.GetTra
 		TokenChanged:   tokenSwapped,
 		Fee:            new(big.Int).SetUint64(tx.Meta.Fee),
 		BotFee:         new(big.Int).SetUint64(botFee),
+		Timestamp:      tx.BlockTime.Time(),
 	}, nil
 }
 

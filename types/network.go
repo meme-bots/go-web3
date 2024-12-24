@@ -86,6 +86,7 @@ type (
 		TokenChanged   *big.Int
 		Fee            *big.Int
 		BotFee         *big.Int
+		Timestamp      time.Time
 	}
 
 	GetPoolRequest struct {
