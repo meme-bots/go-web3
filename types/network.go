@@ -59,6 +59,7 @@ type (
 
 	LaunchResponse struct {
 		TxHash string
+		Token  string
 	}
 
 	TransactResponse struct {

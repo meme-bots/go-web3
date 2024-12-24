@@ -397,7 +397,7 @@ func CreateAndBuy(
 	global *Global,
 	privKey solana.PrivateKey,
 	recentBlockHash solana.Hash,
-) (solana.Signature, error) {
+) (solana.Signature, solana.PublicKey, error) {
 	var instructions []solana.Instruction
 
 	if priorityFee > 0 {
@@ -412,7 +412,7 @@ func CreateAndBuy(
 	owner := privKey.PublicKey()
 	mintPrivateKey, err := solana.NewRandomPrivateKey()
 	if err != nil {
-		return solana.Signature{}, err
+		return solana.Signature{}, solana.PublicKey{}, err
 	}
 
 	mint := mintPrivateKey.PublicKey()
@@ -486,14 +486,14 @@ func CreateAndBuy(
 	if recentBlockHash.IsZero() {
 		recentBlock, err := cli.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 		if err != nil {
-			return solana.Signature{}, err
+			return solana.Signature{}, solana.PublicKey{}, err
 		}
 		recentBlockHash = recentBlock.Value.Blockhash
 	}
 
 	tx, err := solana.NewTransaction(instructions, recentBlockHash, solana.TransactionPayer(owner))
 	if err != nil {
-		return solana.Signature{}, err
+		return solana.Signature{}, solana.PublicKey{}, err
 	}
 
 	_, err = tx.Sign(func(key solana.PublicKey) *solana.PrivateKey {
@@ -505,12 +505,18 @@ func CreateAndBuy(
 		return nil
 	})
 	if err != nil {
-		return solana.Signature{}, err
+		return solana.Signature{}, solana.PublicKey{}, err
 	}
 
+	var signature solana.Signature
 	if jitoTip != 0 {
-		return rpc.New(common.JitoRpc).SendTransaction(ctx, tx)
+		signature, err = rpc.New(common.JitoRpc).SendTransaction(ctx, tx)
+	} else {
+		signature, err = cli.SendTransactionWithOpts(ctx, tx, rpc.TransactionOpts{SkipPreflight: true})
 	}
 
-	return cli.SendTransactionWithOpts(ctx, tx, rpc.TransactionOpts{SkipPreflight: true})
+	if err != nil {
+		return solana.Signature{}, solana.PublicKey{}, err
+	}
+	return signature, mint, nil
 }

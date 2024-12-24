@@ -393,7 +393,7 @@ func (s *Solana) Launch(req *types.LaunchRequest, feeRecipient_ string, feeRatio
 
 	recentBlockHash, _ := s.watcher.GetRecentBlockHash()
 
-	signature, err := pumpfun.CreateAndBuy(
+	signature, token, err := pumpfun.CreateAndBuy(
 		s.ctx,
 		s.cfg.RPC,
 		req.Name,
@@ -414,6 +414,7 @@ func (s *Solana) Launch(req *types.LaunchRequest, feeRecipient_ string, feeRatio
 	}
 	return &types.LaunchResponse{
 		TxHash: signature.String(),
+		Token:  token.String(),
 	}, nil
 }
 
