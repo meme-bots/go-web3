@@ -25,6 +25,7 @@ var (
 	GlobalFeeRecipient            = solana.MPK("CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM")
 	eventAuthority                = solana.MPK("Ce6TQqeHC9p8KetsN6JsjHK7UTZk7nasjjnr7XxXp9F1")
 	MPL_TOKEN_METADATA_PROGRAM_ID = solana.MPK("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
+	MINT_AUTHORITY                = solana.MPK("TSLvdd1pWpHVjahSpsvCXUbgwsL3JAcvokwaKt1eokM")
 )
 
 const (
@@ -428,7 +429,7 @@ func CreateAndBuy(
 		symbol,
 		uri,
 		mint,
-		owner,
+		MINT_AUTHORITY,
 		bondingCurvePubKey,
 		bondingCurveAta,
 		GlobalPubKey,
