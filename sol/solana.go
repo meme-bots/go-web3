@@ -271,7 +271,9 @@ func (s *Solana) GetTransaction(req *types.GetTransactionRequest) (*types.GetTra
 		return nil, err
 	}
 
-	var solSwapped, tokenSwapped *big.Int
+	solSwapped := new(big.Int)
+	tokenSwapped := new(big.Int)
+
 	var botFee uint64
 	for i, instruction := range transaction.Message.Instructions {
 		programID, _ := transaction.Message.Account(instruction.ProgramIDIndex)

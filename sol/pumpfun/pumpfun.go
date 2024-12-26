@@ -402,7 +402,7 @@ func CreateAndBuy(
 	var instructions []solana.Instruction
 
 	if priorityFee > 0 {
-		gasLimit := lo.If(solAmount > 0, 260000).Else(120000)
+		gasLimit := lo.If(solAmount > 0, 280000).Else(140000)
 		gasTmp := new(big.Int).Mul(big.NewInt(1000000), new(big.Int).SetUint64(priorityFee))
 		gasPrice := new(big.Int).Div(gasTmp, big.NewInt(int64(gasLimit)))
 		setCULimitInst := computebudget.NewSetComputeUnitLimitInstruction(uint32(gasLimit)).Build()
