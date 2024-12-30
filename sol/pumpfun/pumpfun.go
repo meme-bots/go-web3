@@ -513,7 +513,7 @@ func CreateAndBuy(
 	if jitoTip != 0 {
 		signature, err = rpc.New(common.JitoRpc).SendTransaction(ctx, tx)
 	} else {
-		signature, err = cli.SendTransactionWithOpts(ctx, tx, rpc.TransactionOpts{SkipPreflight: true})
+		signature, err = cli.SendTransactionWithOpts(ctx, tx, rpc.TransactionOpts{SkipPreflight: false})
 	}
 
 	if err != nil {
