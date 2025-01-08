@@ -147,44 +147,46 @@ func (s *Solana) QueryPool(req *types.QueryPoolRequest) (*types.Pool, error) {
 	return p, nil
 }
 
-func (s *Solana) GetPool(req *types.GetPoolRequest) (*types.GetPoolResponse, error) {
+func (s *Solana) GetPool(req *types.GetPoolRequest, pool *types.Pool) (*types.GetPoolResponse, error) {
 	var ret *common.GetSolPoolResponse
 	var err error
 	var dexID int = 0
+	var balance *common.Balance
 
 	token := req.Token
-	valid := s.CheckAddress(token)
-	if !valid {
-		if strings.Contains(req.URL, "dexscreener.com") {
-			pair, err := QueryDexScreener(token)
-			if err != nil {
-				return nil, err
+	if pool == nil {
+		valid := s.CheckAddress(token)
+		if !valid {
+			if strings.Contains(req.URL, "dexscreener.com") {
+				pair, err := QueryDexScreener(token)
+				if err != nil {
+					return nil, err
+				}
+				token = pair.BaseToken.Address
+				dexID = 0
+			} else {
+				return nil, types.ErrInvalidPool
 			}
-			token = pair.BaseToken.Address
-			dexID = 0
-		} else {
-			return nil, types.ErrInvalidPool
+		}
+		pool, err = s.QueryPool(&types.QueryPoolRequest{Token: token})
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	var balance *common.Balance
-	p, err := s.QueryPool(&types.QueryPoolRequest{Token: token})
-	if err != nil {
-		return nil, err
-	}
-
-	if p.Dex == 0 {
+	if pool.Dex == 0 {
 		dexID = 0
-	} else if p.Dex == 1 && p.Status == 0 {
+	} else if pool.Dex == 1 && pool.Status == 0 {
 		dexID = 1
 	} else {
 		return nil, types.ErrInvalidPool
 	}
 
+	withBalance := len(req.Owner) > 0
 	if dexID == 1 {
-		ret, balance, err = pumpfun.GetPumpFunPool(s.ctx, s.cfg.RPC, &common.GetSolPoolRequest{Token: token, Owner: req.Owner, WithBalance: true})
+		ret, balance, err = pumpfun.GetPumpFunPool(s.ctx, s.cfg.RPC, &common.GetSolPoolRequest{Token: token, Owner: req.Owner, WithBalance: withBalance})
 	} else {
-		ret, balance, err = raydium.GeRaydiumPoolP2(s.ctx, s.cfg.RPC, p, req.Owner, true)
+		ret, balance, err = raydium.GeRaydiumPoolP2(s.ctx, s.cfg.RPC, pool, req.Owner, withBalance)
 	}
 	if err != nil {
 		return nil, err
@@ -192,7 +194,6 @@ func (s *Solana) GetPool(req *types.GetPoolRequest) (*types.GetPoolResponse, err
 
 	nativeTokenPrice := s.GetNativeTokenPrice()
 	priceInUSD := ret.PriceInSol.Mul(nativeTokenPrice)
-
 	return &types.GetPoolResponse{
 		NativeTokenPrice:      nativeTokenPrice,
 		PriceInNativeToken:    ret.PriceInSol,

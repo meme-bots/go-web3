@@ -137,7 +137,7 @@ type (
 		GetMaxMultiSendCount() int
 		GetBalance(req *GetBalanceRequest) (*big.Int, error)
 		GetTokenBalance(req *GetTokenBalanceRequest) (*big.Int, error)
-		GetPool(token *GetPoolRequest) (*GetPoolResponse, error)
+		GetPool(token *GetPoolRequest, pool *Pool) (*GetPoolResponse, error)
 		WatchTransaction(req *WatchTransactionRequest) (interface{}, error)
 		GetTransaction(req *GetTransactionRequest) (*GetTransactionResponse, error)
 		CheckAddress(text string) bool

@@ -122,7 +122,7 @@ func (v *EVM) GetTokenBalance(req *types.GetTokenBalanceRequest) (*big.Int, erro
 	return token.BalanceOf(&bind.CallOpts{}, common.HexToAddress(req.Owner))
 }
 
-func (v *EVM) GetPool(req *types.GetPoolRequest) (*types.GetPoolResponse, error) {
+func (v *EVM) GetPool(req *types.GetPoolRequest, pool *types.Pool) (*types.GetPoolResponse, error) {
 	type balanceOutput struct {
 		Balance *big.Int
 	}
