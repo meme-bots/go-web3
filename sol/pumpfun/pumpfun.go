@@ -50,8 +50,6 @@ type SwapLogLayout struct {
 
 func GetPumpFunPool(ctx context.Context, url string, req *common.GetSolPoolRequest) (*common.GetSolPoolResponse, *common.Balance, error) {
 	mint := solana.MPK(req.Token)
-	owner := solana.MPK(req.Owner)
-
 	client := rpc.New(url)
 
 	bondingCurvePubKey := FindBondingCurve(mint)
@@ -63,6 +61,7 @@ func GetPumpFunPool(ctx context.Context, url string, req *common.GetSolPoolReque
 	}
 
 	if req.WithBalance {
+		owner := solana.MPK(req.Owner)
 		ata, _, _ := solana.FindAssociatedTokenAddress(owner, mint)
 		publicKeys = append(publicKeys, owner, ata)
 	}
