@@ -172,10 +172,8 @@ func GeRaydiumPoolP2(ctx context.Context, url string, p *types.Pool, owner strin
 		return nil, nil, err
 	}
 
-	var balance *common.Balance = nil
+	balance := &common.Balance{NativeBalance: big.NewInt(0), TokenBalance: big.NewInt(0)}
 	if withBalance {
-		balance = &common.Balance{NativeBalance: big.NewInt(0), TokenBalance: big.NewInt(0)}
-
 		if accounts.Value[5] != nil {
 			balance.NativeBalance = new(big.Int).SetUint64(accounts.Value[5].Lamports)
 		}

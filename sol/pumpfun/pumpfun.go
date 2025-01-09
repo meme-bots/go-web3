@@ -75,10 +75,8 @@ func GetPumpFunPool(ctx context.Context, url string, req *common.GetSolPoolReque
 		return nil, nil, err
 	}
 
-	var balance *common.Balance = nil
+	balance := &common.Balance{NativeBalance: big.NewInt(0), TokenBalance: big.NewInt(0)}
 	if req.WithBalance {
-		balance = &common.Balance{NativeBalance: big.NewInt(0), TokenBalance: big.NewInt(0)}
-
 		if accounts.Value[3] != nil {
 			balance.NativeBalance = new(big.Int).SetUint64(accounts.Value[3].Lamports)
 		}
