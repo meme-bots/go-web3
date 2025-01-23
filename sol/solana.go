@@ -407,7 +407,7 @@ func (s *Solana) Launch(req *types.LaunchRequest, feeRecipient_ string, feeRatio
 		req.BuyAmountSol.Uint64(),
 		req.SlipPage,
 		req.Gas.Uint64(),
-		0,
+		feeRatio,
 		req.Tip.Uint64(),
 		&global,
 		pk,
