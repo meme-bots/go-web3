@@ -123,7 +123,7 @@ func (s *Solana) GetTokenBalance(req *types.GetTokenBalanceRequest) (*big.Int, e
 }
 
 func (s *Solana) QueryPool(req *types.QueryPoolRequest) (*types.Pool, error) {
-	var p1, p2, p3 *types.Pool
+	var p1, p2, p3, p4, p5 *types.Pool
 	sub := utils.Subprocesses{}
 	mint := solana.MPK(req.Token)
 
@@ -136,10 +136,16 @@ func (s *Solana) QueryPool(req *types.QueryPoolRequest) (*types.Pool, error) {
 	sub.Go(func() {
 		p3, _ = pumpfun.GetPumpFunPoolByToken(context.Background(), s.cfg.RPC, mint)
 	})
+	sub.Go(func() {
+		p4, _ = raydium.GetRaydiumCLMMPoolByToken(context.Background(), s.cfg.RPC, mint, true)
+	})
+	sub.Go(func() {
+		p5, _ = raydium.GetRaydiumCLMMPoolByToken(context.Background(), s.cfg.RPC, mint, false)
+	})
 
 	sub.Wait()
 
-	p := lo.If(p1 != nil, p1).ElseIf(p2 != nil, p2).ElseIf(p3 != nil, p3).Else(nil)
+	p := lo.If(p1 != nil, p1).ElseIf(p2 != nil, p2).ElseIf(p3 != nil, p3).ElseIf(p4 != nil, p4).ElseIf(p5 != nil, p5).Else(nil)
 	if p == nil {
 		return nil, types.ErrInvalidPool
 	}
@@ -330,7 +336,7 @@ func (s *Solana) GetAddressFromInput(text string) string {
 		`^https://birdeye.so/token/([1-9A-HJ-NP-Za-km-z]{32,44})$`,
 		`^https://birdeye.so/token/([1-9A-HJ-NP-Za-km-z]{32,44})\?.*$`,
 		`^https://pump.fun/([1-9A-HJ-NP-Za-km-z]{32,44})$`,
-		//`^https://dexscreener.com/solana/([1-9A-HJ-NP-Za-km-z]{32,44})$`,
+		// `^https://dexscreener.com/solana/([1-9A-HJ-NP-Za-km-z]{32,44})$`,
 		`^https://dexscreener.com/solana/([1-9a-z]{32,44})$`,
 	}
 

@@ -2,8 +2,6 @@ package raydium
 
 import (
 	"context"
-	"math/big"
-
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/programs/token"
@@ -14,6 +12,7 @@ import (
 	"github.com/near/borsh-go"
 	"github.com/samber/lo"
 	"github.com/shopspring/decimal"
+	"math/big"
 )
 
 const (
@@ -21,8 +20,9 @@ const (
 )
 
 var (
-	ProgramID   = solana.MPK("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8")
-	AuthorityV4 = solana.MPK("5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1")
+	CLMMProgramID = solana.MPK("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK")
+	ProgramID     = solana.MPK("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8")
+	AuthorityV4   = solana.MPK("5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1")
 )
 
 type (
@@ -92,7 +92,7 @@ type (
 		LpReserve uint64
 
 		Padding uint64
-		//seq(u64(), 3, 'padding')
+		// seq(u64(), 3, 'padding')
 	}
 
 	PoolInfo struct {
@@ -111,6 +111,62 @@ type (
 		MarketProgramId string
 		Dex             int
 		Status          int
+	}
+
+	RewardInfo struct {
+		RewardState           uint8
+		OpenTime              uint64
+		EndTime               uint64
+		LastUpdateTime        uint64
+		EmissionsPerSecondX64 big.Int
+		RewardTotalEmissioned uint64
+		RewardClaimed         uint64
+		TokenMint             solana.PublicKey
+		TokenVault            solana.PublicKey
+		Authority             solana.PublicKey
+		RewardGrowthGlobalX64 big.Int
+	}
+
+	ClmmPoolData struct {
+		Discrimator            [8]uint8
+		Bump                   uint8
+		AmmConfig              solana.PublicKey
+		Owner                  solana.PublicKey
+		TokenMint0             solana.PublicKey
+		TokenMint1             solana.PublicKey
+		TokenVault0            solana.PublicKey
+		TokenVault1            solana.PublicKey
+		ObservationKey         solana.PublicKey
+		MintDecimals0          uint8
+		MintDecimals1          uint8
+		TickSpacing            uint16
+		Liquidity              big.Int
+		SqrtPriceX64           big.Int
+		TickCurrent            int32
+		Padding3               uint16
+		Padding4               uint16
+		FeeGrowthGlobal0X64    big.Int
+		FeeGrowthGlobal1X64    big.Int
+		ProtocolFeesToken0     uint64
+		ProtocolFeesToken1     uint64
+		SwapInAmountToken0     big.Int
+		SwapOutAmountToken1    big.Int
+		SwapInAmountToken1     big.Int
+		SwapOutAmountToken0    big.Int
+		Status                 uint8
+		Padding                [7]uint8
+		RewardInfos            [3]RewardInfo
+		TickArrayBitmap        [16]uint64
+		TotalFeesToken0        uint64
+		TotalFeesClaimedToken0 uint64
+		TotalFeesToken1        uint64
+		TotalFeesClaimedToken1 uint64
+		FundFeesToken0         uint64
+		FundFeesToken1         uint64
+		OpenTime               uint64
+		RecentEpoch            uint64
+		Padding1               [24]uint64
+		Padding2               [32]uint64
 	}
 )
 
@@ -321,6 +377,57 @@ func GetRaydiumPoolByToken(ctx context.Context, url string, token solana.PublicK
 		LpMint:          pool.LpMint.String(),
 		OpenTime:        int64(pool.PoolOpenTime),
 		Dex:             0, // DexTypeRaydium
+		Marked:          true,
+	}, nil
+}
+
+func GetRaydiumCLMMPoolByToken(ctx context.Context, url string, token solana.PublicKey, isBaseToken bool) (*types.Pool, error) {
+	client := rpc.New(url)
+	baseToken := lo.If(isBaseToken, token).Else(solana.SolMint)
+	quoteToken := lo.If(isBaseToken, solana.SolMint).Else(token)
+
+	result, err := client.GetProgramAccountsWithOpts(context.Background(), CLMMProgramID, &rpc.GetProgramAccountsOpts{
+		Commitment: rpc.CommitmentConfirmed,
+		Encoding:   solana.EncodingBase64,
+		Filters: []rpc.RPCFilter{
+			{Memcmp: &rpc.RPCFilterMemcmp{Offset: 73, Bytes: quoteToken.Bytes()}},
+			{Memcmp: &rpc.RPCFilterMemcmp{Offset: 105, Bytes: baseToken.Bytes()}},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(result) == 0 {
+		return nil, nil
+	}
+
+	var pool ClmmPoolData
+	var ammPK solana.PublicKey
+	for _, account := range result {
+		var tmp ClmmPoolData
+		_ = borsh.Deserialize(&tmp, account.Account.Data.GetBinary())
+
+		if tmp.Liquidity.Cmp(&pool.Liquidity) > 0 {
+			pool = tmp
+			ammPK = account.Pubkey
+		}
+	}
+
+	return &types.Pool{
+		AmmPublicKey:    ammPK.String(),
+		MarketPublicKey: "",
+		MarketProgramID: "",
+		BaseMint:        pool.TokenMint1.String(),
+		BaseVault:       pool.TokenVault1.String(),
+		BaseDecimal:     pool.MintDecimals1,
+		QuoteMint:       pool.TokenMint0.String(),
+		QuoteVault:      pool.TokenVault0.String(),
+		QuoteDecimal:    pool.MintDecimals0,
+		LpMint:          "",
+		OpenTime:        int64(pool.OpenTime),
+		Status:          int(pool.Status),
+		Dex:             0,
 		Marked:          true,
 	}, nil
 }

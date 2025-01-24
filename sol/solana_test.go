@@ -2,11 +2,12 @@ package sol
 
 import (
 	"context"
-	"testing"
-
+	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/meme-bots/go-web3/sol/pumpfun"
+	"github.com/meme-bots/go-web3/sol/raydium"
 	"github.com/near/borsh-go"
+	"testing"
 )
 
 func TestSolana_GetGlobal(t *testing.T) {
@@ -26,4 +27,16 @@ func TestSolana_GetGlobal(t *testing.T) {
 	}
 	t.Logf("global: %+v", global)
 	t.Logf("token: %d", pumpfun.GetInitialBuyPrice(&global, 30000000000))
+}
+
+func TestSolana_GetRaydiumCLMMPoolByToken(t *testing.T) {
+	r := ""
+	token := solana.MPK("HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC")
+	pool, err := raydium.GetRaydiumCLMMPoolByToken(context.Background(), r, token, true)
+	t.Log(err)
+	t.Log(pool)
+
+	ret, balance, err := raydium.GeRaydiumPoolP2(context.Background(), r, pool, "", false)
+	t.Log(ret)
+	t.Log(balance)
 }
