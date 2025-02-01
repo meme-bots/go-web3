@@ -23,6 +23,7 @@ type (
 		Status          int
 		Dex             int
 		Marked          bool
+		MMType          RaydiumMMType
 	}
 
 	PriceHistorical struct {

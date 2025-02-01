@@ -30,13 +30,13 @@ func TestSolana_GetGlobal(t *testing.T) {
 }
 
 func TestSolana_GetRaydiumCLMMPoolByToken(t *testing.T) {
-	r := ""
+	r := "https://api.mainnet-beta.solana.com"
 	token := solana.MPK("HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC")
 	pool, err := raydium.GetRaydiumCLMMPoolByToken(context.Background(), r, token, true)
 	t.Log(err)
 	t.Log(pool)
 
-	ret, balance, err := raydium.GeRaydiumPoolP2(context.Background(), r, pool, "", false)
+	ret, balance, err := raydium.GeRaydiumPoolCLMM(context.Background(), r, pool, "Gmgy14zk3eNwyNWKUS5qJQcmRDGFirwFyGkAXxTc3LFZ", false)
 	t.Log(ret)
 	t.Log(balance)
 }
