@@ -180,8 +180,10 @@ func (s *Solana) GetPool(req *types.GetPoolRequest, pool *types.Pool) (*types.Ge
 		}
 	}
 
-	if pool.Dex == int(types.DexIDRaydium) {
-		dexID = types.DexIDRaydium
+	if pool.Dex == int(types.DexIDRaydiumV4) {
+		dexID = types.DexIDRaydiumV4
+	} else if pool.Dex == int(types.DexIDRaydiumCLMM) {
+		dexID = types.DexIDRaydiumCLMM
 	} else if pool.Dex == int(types.DexIDPumpFun) && pool.Status == 0 {
 		dexID = types.DexIDPumpFun
 	} else {
@@ -191,12 +193,10 @@ func (s *Solana) GetPool(req *types.GetPoolRequest, pool *types.Pool) (*types.Ge
 	withBalance := len(req.Owner) > 0
 	if dexID == types.DexIDPumpFun {
 		ret, balance, err = pumpfun.GetPumpFunPool(s.ctx, s.cfg.RPC, &common.GetSolPoolRequest{Token: token, Owner: req.Owner, WithBalance: withBalance})
+	} else if dexID == types.DexIDRaydiumCLMM {
+		ret, balance, err = raydium.GeRaydiumPoolCLMM(s.ctx, s.cfg.RPC, pool, req.Owner, withBalance)
 	} else {
-		if pool.MMType == types.RaydiumCLMM {
-			ret, balance, err = raydium.GeRaydiumPoolCLMM(s.ctx, s.cfg.RPC, pool, req.Owner, withBalance)
-		} else {
-			ret, balance, err = raydium.GeRaydiumPoolP2(s.ctx, s.cfg.RPC, pool, req.Owner, withBalance)
-		}
+		ret, balance, err = raydium.GeRaydiumPoolP2(s.ctx, s.cfg.RPC, pool, req.Owner, withBalance)
 	}
 	if err != nil {
 		return nil, err

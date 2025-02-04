@@ -565,7 +565,6 @@ func GetRaydiumPoolByToken(ctx context.Context, url string, token solana.PublicK
 		OpenTime:        int64(pool.PoolOpenTime),
 		Dex:             0, // DexTypeRaydium
 		Marked:          true,
-		MMType:          types.RaydiumCLMM,
 	}, nil
 }
 
