@@ -614,7 +614,7 @@ func GetRaydiumCLMMPoolByToken(ctx context.Context, url string, token solana.Pub
 		LpMint:          "",
 		OpenTime:        int64(pool.OpenTime),
 		Status:          int(pool.Status),
-		Dex:             0,
+		Dex:             int(types.DexIDRaydiumCLMM),
 		Marked:          true,
 	}, nil
 }
